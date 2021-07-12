@@ -90,23 +90,31 @@ class ViewCustomerRequest(BasePage):
     def wait_for_page_loaded(self):
         self.wait_until_visible(ViewCustomerRequestLocators.bread_crumbs)
 
+    def check_comment_text_is_displayed(self, field, text, rte_status=None):
+        if field.text != text:
+            if rte_status:
+                self.return_to_parent_frame()
+                self.wait_until_available_to_switch(ViewCustomerRequestLocators.comment_text_field_RTE)
+            field.click()
+            field.send_keys(text)
+
     def add_request_comment(self, rte_status):
         comment_text = f"Add comment from selenium - {self.generate_random_string(30)}"
         textarea = self.get_element(ViewCustomerRequestLocators.comment_collapsed_textarea)
         self.driver.execute_script("arguments[0].scrollIntoView(true);", textarea)
         textarea.click()
-
         if rte_status:
             self.wait_until_available_to_switch(ViewCustomerRequestLocators.comment_text_field_RTE)
             tinymce_field = self.get_element(ViewCustomerRequestLocators.comment_tinymce_field)
             self.driver.execute_script("arguments[0].scrollIntoView(true);", tinymce_field)
-            self.action_chains().send_keys_to_element(tinymce_field, comment_text).perform()
+            tinymce_field.send_keys(comment_text)
+            self.check_comment_text_is_displayed(tinymce_field, comment_text, rte_status)
             self.return_to_parent_frame()
         else:
             comment_text_field = self.get_element(ViewCustomerRequestLocators.comment_text_field)
             self.driver.execute_script("arguments[0].scrollIntoView(true);", comment_text_field)
-            self.action_chains().move_to_element(comment_text_field).click()\
-                .send_keys_to_element(comment_text_field, comment_text).perform()
+            comment_text_field.send_keys(comment_text)
+            self.check_comment_text_is_displayed(comment_text_field, comment_text)
 
         comment_button = self.get_element(ViewCustomerRequestLocators.comment_internally_btn)
         self.driver.execute_script("arguments[0].scrollIntoView(true);", comment_button)
@@ -177,4 +185,5 @@ class ViewQueue(BasePage):
                                       ['All open', 'Recently resolved', 'Resolved past 7 days']
                                       and queue.text.partition('\n')[2] != '0'])
         random_queue.click()
-        self.wait_until_visible(ViewQueueLocators.queues_status, timeout=self.timeout)
+        self.wait_until_any_ec_presented(
+            selector_names=[ViewQueueLocators.queues_status, ViewQueueLocators.queue_is_empty], timeout=self.timeout)
